@@ -21,11 +21,13 @@ import eu.ill.puma.sparkmatcher.utils.nlp.FormulaAnalyser.entities.WordType;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class WordService {
 
@@ -67,6 +69,10 @@ public class WordService {
             word.removeIfEndBy("’");
             word.removeIfStartBy("'");
             word.removeIfStartBy("\"");
+            word.removeIfStartBy("^");
+            word.removeIfStartBy("{");
+            word.removeIfStartBy("}");
+            word.removeIfStartBy("/");
 
             word.removeIfStartBy("-");
             word.removeIfStartBy("\\");
@@ -371,9 +377,36 @@ public class WordService {
             }
 
             //black : eg postcode
-            if(blackList.contains(alphaNumericWord)){
+            if (blackList.contains(alphaNumericWord)) {
                 potentialFormula = false;
             }
+
+            //check if the number of numeric char is not higher than the the of letter
+            int digitCount = 0;
+            int letterCount = 0;
+            int wordSize = alphaNumericWord.length();
+            int numberOfNumber = Arrays.stream(alphaNumericWord.split("[A-Z]|[a-z]+"))
+                    .filter(s -> s.matches("(.+)?[0-9](.+)?"))
+                    .sorted((s1, s2) -> s2.length() - s1.length())
+                    .collect(Collectors.toList())
+                    .size();
+
+
+            for (int i = 0, len = wordSize; i < len; i++) {
+                if (Character.isDigit(alphaNumericWord.charAt(i))) digitCount++;
+            }
+
+            for (int i = 0, len = wordSize; i < len; i++) {
+                if (Character.isLetter(alphaNumericWord.charAt(i))) letterCount++;
+            }
+
+            //offset of 1 to keep Ur235
+            if (digitCount > letterCount + numberOfNumber) {
+                potentialFormula = false;
+            }
+
+
+
 
             //mark as formula
             if (potentialFormula) {
@@ -383,4 +416,12 @@ public class WordService {
 
         return word;
     }
+
+//    public static void main(String[] args){
+//        String testFormula = "F-76432";
+//        Word word = new Word(testFormula);
+//        word = WordService.classify(word, "");
+//
+//        System.out.println(word.getTypes());
+//    }
 }
