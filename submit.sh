@@ -30,6 +30,7 @@ usage() {
 classForApp() {
     case "$1" in
         matcher) echo "eu.ill.puma.sparkmatcher.matching.app.FullMatcherApp";;
+        testmatcher) echo "eu.ill.puma.sparkmatcher.matching.app.TestMatcherApp";;
         optimizer) echo "eu.ill.puma.sparkmatcher.matching.app.OptimizerApp";;
         test) echo "eu.ill.puma.sparkmatcher.matching.app.TestApp";;
         documentDeduplicator) echo "eu.ill.puma.sparkmatcher.deduplication.dedup.DocumentDeduplicatorApp";;
