@@ -619,11 +619,11 @@ class AdvancedInstrumentAnalyser(val instrumentDataSource: DataSource,
 
     Logger.info("Instrument analyser", "Instrument model", s"Close word per instrument probability model successfully built : ")
 
-    model.select($"instrument_code", $"word")
-      .groupBy($"instrument_code")
-      .agg(collect_list($"word") as "words")
-      .collect()
-      .foreach(row => Logger.info("Instrument analyser", "Instrument model", s"${row.getAs[String]("instrument_code")} : ${row.getAs[mutable.WrappedArray[String]]("words").mkString(" ")}"))
+//    model.select($"instrument_code", $"word")
+//      .groupBy($"instrument_code")
+//      .agg(collect_list($"word") as "words")
+//      .collect()
+//      .foreach(row => Logger.info("Instrument analyser", "Instrument model", s"${row.getAs[String]("instrument_code")} : ${row.getAs[mutable.WrappedArray[String]]("words").mkString(" ")}"))
 
     model.drop("rank", "count").cache()
   }

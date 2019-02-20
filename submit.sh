@@ -40,6 +40,7 @@ classForApp() {
         testML) echo "eu.ill.puma.sparkmatcher.test.TestMl";;
         *) echo "$UNKNOWN";;
     esac
+
 }
 
 masterForOption() {

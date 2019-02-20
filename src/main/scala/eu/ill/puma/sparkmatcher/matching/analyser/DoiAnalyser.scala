@@ -25,7 +25,6 @@ import org.apache.spark.ml.feature.StringIndexer
 import org.apache.spark.sql.functions.{count, lit}
 import org.apache.spark.sql.types.LongType
 import org.apache.spark.sql.{DataFrame, SaveMode}
-import org.apache.spark.storage.StorageLevel
 
 import scala.collection.mutable.ListBuffer
 
@@ -41,7 +40,7 @@ class DoiAnalyser(var fileDataSource: FileDataSource,
     val (fileDataFrameType, fileDataFrame) = fileDataSource.loadData
 
     //analysis
-    val analysedDoi = this.analyse(fileDataFrame, ownedDoi);
+    val analysedDoi = this.analyse(fileDataFrame, ownedDoi)
 
     (EntitiesIdDfType, analysedDoi)
   }
@@ -57,7 +56,7 @@ class DoiAnalyser(var fileDataSource: FileDataSource,
     //analyse words
     val analyzedWords = fileDataSet.flatMap(document => {
       var list = new ListBuffer[(Long, String, String)]
-      val analyzed = CodeAnalyserService.analyseDoi(document._2)
+      val analyzed = CodeAnalyserService.analyseILLDoi(document._2)
 
       analyzed.foreach(word => {
         list.append((document._1, word, ReferencedDoiType.stringValue))
@@ -65,7 +64,7 @@ class DoiAnalyser(var fileDataSource: FileDataSource,
 
       list
     }).toDF("document_version_id", "entity", "type").cache()
-
+    
     //generate formula id
     val indexer = new StringIndexer()
       .setInputCol("entity")

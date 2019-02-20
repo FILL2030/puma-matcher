@@ -33,7 +33,7 @@ class EntitiesScorer(var saveSimilarities: Boolean = true,
     (MatchCandidateWithoutTypeDfType, this.score(input.head._2))
   }
 
-  def score(data:  DataFrame): DataFrame = {
+  def score(data: DataFrame): DataFrame = {
     import data.sparkSession.implicits._
 
     val idUdf = udf[Int, String](x => EntityType.getByValue(x).id)
