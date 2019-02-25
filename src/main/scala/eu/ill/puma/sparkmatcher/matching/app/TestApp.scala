@@ -15,7 +15,7 @@
  */
 package eu.ill.puma.sparkmatcher.matching.app
 
-import eu.ill.puma.sparkmatcher.matching.analyser.{AdvancedInstrumentAnalyser, DocumentWordSpecAnalyser, PictureHashAnalyser2, TextEntitiesAnalyser}
+import eu.ill.puma.sparkmatcher.matching.analyser._
 import eu.ill.puma.sparkmatcher.matching.datasource.DataSourceStorage
 import eu.ill.puma.sparkmatcher.matching.filter._
 import eu.ill.puma.sparkmatcher.matching.pipepline._
@@ -29,7 +29,14 @@ import org.apache.spark.sql.SparkSession
 object TestApp {
   def main(args: Array[String]): Unit = {
 
-    this.testAdvTechnics
+    //    DocumentDeduplicatorApp.main(args)
+    //    LaboratoryDeduplicatorApp.main(args)
+    //    PersonDeduplicatorApp.main(args)
+
+    FullMatcherApp.main(args)
+
+
+    //    this.runDoi
 
   }
 
@@ -214,7 +221,7 @@ object TestApp {
     val wordSpecConfig = new PipelineConfig("word spec config")
     wordSpecConfig.dataSource = dataSourceStorage.fileDataSource
     wordSpecConfig.matchEntityType = NoType
-    wordSpecConfig.analyser = new DocumentWordSpecAnalyser
+    wordSpecConfig.analyser = new DocumentWordSpecAnalyser2
 
     //add config
     wordSpecPipeline.addConfig(wordSpecConfig)
@@ -222,5 +229,44 @@ object TestApp {
     //run
     wordSpecPipeline.run()
   }
+
+
+  def runDoi = {
+    org.apache.log4j.Logger.getLogger("org").setLevel(Level.OFF)
+
+    //create spark session
+    val sparkSession = SparkSession
+      .builder()
+      .master("local[*]")
+      .appName("WordSpec")
+      .config(ProgramConfig.defaultSparkConfig)
+      .getOrCreate()
+
+    //create data source storage
+    val dataSourceStorage = new DataSourceStorage(sparkSession)
+
+    //create stage
+    val initialisationStage = new InitialisationStage(Nil, "init")
+    val analyserStage = new AnalyserStage("init" :: Nil, "analyzer_output")
+
+    //create pipeline
+    val wordSpecPipeline = new Pipeline("word_spec_pipeline")
+    wordSpecPipeline.addStage(initialisationStage)
+    wordSpecPipeline.addStage(analyserStage)
+
+    //configure pipeline
+    val doiMatchConfig = new PipelineConfig("word spec config")
+    doiMatchConfig.matchEntityType = DoiType
+    doiMatchConfig.dataSource = dataSourceStorage.doiDataSource
+    doiMatchConfig.analyser = new DoiAnalyser(dataSourceStorage.fileDataSource)
+    doiMatchConfig.analyser = new DoiAnalyser(dataSourceStorage.fileDataSource)
+
+    //add config
+    wordSpecPipeline.addConfig(doiMatchConfig)
+
+    //run
+    wordSpecPipeline.run()
+  }
+
 
 }

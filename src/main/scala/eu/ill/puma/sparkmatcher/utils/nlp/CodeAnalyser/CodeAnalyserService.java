@@ -80,7 +80,7 @@ public class CodeAnalyserService {
             String doi = doiMatcher.group(0);
 
             //handle ILL data DOI
-            if (doi.contains("ILL-DATA")) {
+            if (doi.contains("10.5291/ILL")) {
                 //extract words after doi if exist
                 int start = doiMatcher.start(0);
                 int end = doiMatcher.end(0) + +illDoiSentenceOffSet;
@@ -101,16 +101,20 @@ public class CodeAnalyserService {
                                 return word;
                             }
                         })
+                        .filter(word -> word.length() > 0)
+                        .filter(word -> !word.equals("-"))
                         .collect(Collectors.toList());
+
+
                 List<String> doiProposalCode = Arrays.asList(doi.split("\\.")).stream().filter(word -> word.length() > 0).collect(Collectors.toList());
 
                 //check list are not empty
                 if (wordsAfterDoi.size() > 0 && doiProposalCode.size() > 0) {
 
-                    //build potential proposal code 1
+                    //build potential doi
                     String potentialProposalCode = doiProposalCode.get(doiProposalCode.size() - 1) + wordsAfterDoi.get(0);
 
-                    //add the word after the doi to the doi if its a part of the proposal code
+                    //validation
                     if (potentialProposalCode.matches(proposalCodeRegexString)) {
                         doi = doi + wordsAfterDoi.get(0);
                     }
@@ -119,12 +123,55 @@ public class CodeAnalyserService {
                 //check list are not empty
                 if (wordsAfterDoi.size() > 1 && doiProposalCode.size() > 0) {
 
-                    //build potential proposal code 2
+                    //build potential doi
                     String potentialProposalCode = doiProposalCode.get(doiProposalCode.size() - 1) + wordsAfterDoi.get(0) + wordsAfterDoi.get(1);
 
-                    //add the word after the doi to the doi if its a part of the proposal code
+                    //validation
                     if (potentialProposalCode.matches(proposalCodeRegexString)) {
                         doi = doi + wordsAfterDoi.get(0) + wordsAfterDoi.get(1);
+                    }
+                }
+
+                //check list are not empty
+                if (wordsAfterDoi.size() > 0) {
+
+                    //build potential doi
+                    String potentialProposalCode = wordsAfterDoi.get(0);
+
+                    //validation
+                    if (potentialProposalCode.matches(proposalCodeRegexString)) {
+                        doi = doi + wordsAfterDoi.get(0);
+                    }
+                }
+
+                //check list are not empty
+                if (wordsAfterDoi.size() > 0 &&  wordsAfterDoi.get(0).split("\\.").length > 1) {
+
+                    //build potential doi
+                    String data = wordsAfterDoi.get(0).split("\\.")[0];
+                    String potentialProposalCode = wordsAfterDoi.get(0).split("\\.")[1];
+
+
+                    //validation
+                    if (potentialProposalCode.matches(proposalCodeRegexString) && data.equals("DATA")) {
+                        doi = doi + "DATA." + potentialProposalCode;
+                    }
+
+                    //validation
+                    if (potentialProposalCode.matches(proposalCodeRegexString) && data.equals("-DATA")) {
+                        doi = doi + "-DATA." + potentialProposalCode;
+                    }
+                }
+
+                //check list are not empty
+                if (wordsAfterDoi.size() > 2) {
+
+                    //build potential doi
+                    String potentialProposalCode = wordsAfterDoi.get(0) + wordsAfterDoi.get(1) + wordsAfterDoi.get(1);
+
+                    //validation
+                    if (potentialProposalCode.matches(proposalCodeRegexString)) {
+                        doi = doi + wordsAfterDoi.get(0) + wordsAfterDoi.get(1) + wordsAfterDoi.get(1);
                     }
                 }
 
@@ -137,4 +184,8 @@ public class CodeAnalyserService {
 
         return dois;
     }
+
+//    public static void main(String[] args) {
+//        CodeAnalyserService.analyseILLDoi("bla fldsmfl fdshkfks 10.5291/ILL -DATA.8-76-780 gljfdsjgfklj kjgfsdlgk").forEach(doi -> System.out.println(doi));
+//    }
 }
