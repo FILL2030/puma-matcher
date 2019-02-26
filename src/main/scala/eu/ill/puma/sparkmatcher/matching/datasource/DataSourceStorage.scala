@@ -88,8 +88,10 @@ class DataSourceStorage(sparkSession: SparkSession, val prod: Boolean = ProgramC
   }
 
   val trainingIdSql = s"(select distinct(publication_id) as training_id, 'PUBLICATION' as training_type from matching_static.test_match union select distinct(proposal_id) as training_id, 'PROPOSAL' as training_type from matching_static.test_match) query"
+//  val trainingIdSql = s"(select distinct document_version1_id as training_id, document_type    from matching_static.match_candidate_validation, puma.document, puma.document_version    where document_version.document_id = document.id    and document_version1_id = document_version.id  and accepted = true) query"
 
-  val trainingPairSql = s"(select proposal_id, publication_id from matching_static.test_match ) query"
+//  val trainingPairSql = s"(select proposal_id, publication_id from matching_static.test_match ) query"
+  val trainingPairSql = s"(select document_version1_id as proposal_id, document_version2_id as publication_id from matching_static.match_candidate_validation where accepted = true and document_version1_id < document_version2_id) query"
 
   val typeSql = "(select document_version.id as document_version_id, document_type as document_type from document, document_version where document_version.document_id = document.id) type"
 
