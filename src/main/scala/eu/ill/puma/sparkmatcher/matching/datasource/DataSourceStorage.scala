@@ -101,13 +101,14 @@ class DataSourceStorage(sparkSession: SparkSession, val prod: Boolean = ProgramC
     "       CASE " +
     "           WHEN document_type='PROPOSAL' THEN document_version1_id " +
     "           ELSE document_version2_id " +
-    "       END AS proposal_id " +
+    "       END AS proposal_id, " +
+    "       accepted " +
     "FROM matching_static.match_candidate_validation," +
     "     puma.document_version, " +
     "     puma.document " +
     "WHERE puma.document_version.document_id = document.id " +
     "  AND puma.document_version.document_id = document_version1_id " +
-    "  AND accepted = TRUE\n  AND document_version1_id < document_version2_id " +
+    "  AND document_version1_id < document_version2_id " +
     "  AND document_type IN ('PUBLICATION', " +
     "                        'PROPOSAL')" +
     ") query"

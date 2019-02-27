@@ -26,7 +26,6 @@ import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Column, DataFrame, Row, SaveMode, SparkSession}
-import org.apache.spark.storage.StorageLevel
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -48,6 +47,7 @@ class WeightTrainerStage(override val input: List[String],
   private val typeToOptimize: ListBuffer[EntityType] = ListBuffer.empty[EntityType]
   private val publicationTrainingIds = trainingMatchIds.loadData._2.select("publication_id").distinct().collect().map(_.getLong(0))
   private val pairTrainingIds = trainingMatchIds.loadData._2.select("publication_id", "proposal_id").distinct().collect().map(x => x.getLong(0) * 1000000000L + x.getLong(1))
+  private val acceptedPairTrainingIds = trainingMatchIds.loadData._2.filter(col("accepted") === true).select("publication_id", "proposal_id").distinct().collect().map(x => x.getLong(0) * 1000000000L + x.getLong(1))
 
   /**
     * Run the stage
@@ -212,14 +212,16 @@ class WeightTrainerStage(override val input: List[String],
       //evaluator
       val bestWeight = rankedMatchCandidate
         .filter(($"publication_id" * 1000000000 + $"proposal_id").isin(pairTrainingIds: _*))
+        .withColumn("accepted", when(($"publication_id" * 1000000000 + $"proposal_id").isin(acceptedPairTrainingIds: _*), true).otherwise(false))
         .withColumn("rank", when($"total_score" === 0, 10).otherwise($"rank"))
         .groupBy("weight_id")
         .agg(
           sum($"rank" - 1).cast(DoubleType) as "sum",
-          sum(when($"rank" <= 10, 1).otherwise(0)) as "top10",
-          sum(when($"rank" <= 5, 1).otherwise(0)) as "top5",
-          sum(when($"rank" <= 3, 1).otherwise(0)) as "top3",
-          sum(when($"rank" <= 1, 1).otherwise(0)) as "top1")
+          sum(when($"rank" <= lit(10) and $"accepted" === true , 1).when($"rank" <= lit(10) and $"accepted" === false , -1).otherwise(0)) as "top10",
+          sum(when($"rank" <= lit(5) and $"accepted" === true , 1).when($"rank" <= lit(5) and $"accepted" === false , -1).otherwise(0)) as "top5",
+          sum(when($"rank" <= lit(3) and $"accepted" === true , 1).when($"rank" <= lit(3) and $"accepted" === false , -1).otherwise(0)) as "top3",
+          sum(when($"rank" <= lit(1) and $"accepted" === true , 1).when($"rank" <= lit(1) and $"accepted" === false , -1).otherwise(0)) as "top1"
+        )
         .join(weightDataFrame, $"weight_id" === $"id")
         .withColumn("error", errorColumn)
         .orderBy($"top5".desc, $"top3".desc, $"top1".desc)
@@ -378,14 +380,15 @@ class WeightTrainerStage(override val input: List[String],
       //evaluator
       var bestWeight = rankedMatchCandidate
         .filter(($"publication_id" * 1000000000 + $"proposal_id").isin(pairTrainingIds: _*))
+        .withColumn("accepted", when(($"publication_id" * 1000000000 + $"proposal_id").isin(acceptedPairTrainingIds: _*), true).otherwise(false))
         .withColumn("rank", when($"total_score" === 0, 10).otherwise($"rank"))
         .groupBy("weight_id")
         .agg(
           sum($"rank" - 1).cast(DoubleType) as "sum",
-          sum(when($"rank" <= 10, 1).otherwise(0)) as "top10",
-          sum(when($"rank" <= 5, 1).otherwise(0)) as "top5",
-          sum(when($"rank" <= 3, 1).otherwise(0)) as "top3",
-          sum(when($"rank" <= 1, 1).otherwise(0)) as "top1"
+          sum(when($"rank" <= lit(10) and $"accepted" === true , 1).when($"rank" <= lit(10) and $"accepted" === false , -1).otherwise(0)) as "top10",
+          sum(when($"rank" <= lit(5) and $"accepted" === true , 1).when($"rank" <= lit(5) and $"accepted" === false , -1).otherwise(0)) as "top5",
+          sum(when($"rank" <= lit(3) and $"accepted" === true , 1).when($"rank" <= lit(3) and $"accepted" === false , -1).otherwise(0)) as "top3",
+          sum(when($"rank" <= lit(1) and $"accepted" === true , 1).when($"rank" <= lit(1) and $"accepted" === false , -1).otherwise(0)) as "top1"
         )
 
       bestWeight = bestWeight.join(weight, Seq("weight_id"))
