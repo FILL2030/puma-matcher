@@ -134,6 +134,7 @@ object ProgramConfig extends Serializable {
     .set("spark.sql.objectHashAggregate.sortBased.fallbackThreshold", "1024")
     .set("spark.sql.shuffle.partitions", ProgramConfig.partitionNumber.toString)
     .set("spark.debug.maxToStringFields", "200")
+    .set("spark.sql.files.ignoreCorruptFiles", "true")
   //    .set("spark.executor.cores", "128")
 
   var env = ""

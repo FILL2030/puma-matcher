@@ -32,11 +32,9 @@ object TestApp {
     //    DocumentDeduplicatorApp.main(args)
     //    LaboratoryDeduplicatorApp.main(args)
     //    PersonDeduplicatorApp.main(args)
-
-    FullMatcherApp.main(args)
-
-
+//    FullMatcherApp.main(args)
     //    this.runDoi
+        this.test
 
   }
 
@@ -266,6 +264,28 @@ object TestApp {
 
     //run
     wordSpecPipeline.run()
+  }
+
+  def test = {
+    org.apache.log4j.Logger.getLogger("org").setLevel(Level.OFF)
+
+    //create spark session
+    val sparkSession = SparkSession
+      .builder()
+      .master("local[*]")
+      .appName("WordSpec")
+      .config(ProgramConfig.defaultSparkConfig)
+      .getOrCreate()
+
+    val hdfs = sparkSession.read.textFile("hdfs://puma-spark-1:9000/user/hadoop/ngrams/*")
+
+    Logger.info("App", "no config", "start")
+
+    println(hdfs.count())
+
+    Logger.info("App", "no config", "stop")
+
+    //    sparkSession.sparkContext.textFile("hdfs://puma-spark-1:9000/user/hadoop/ngrams/*").toDF().show(20)
   }
 
 
