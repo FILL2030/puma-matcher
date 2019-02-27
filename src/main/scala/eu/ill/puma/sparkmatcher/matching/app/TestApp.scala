@@ -32,9 +32,9 @@ object TestApp {
     //    DocumentDeduplicatorApp.main(args)
     //    LaboratoryDeduplicatorApp.main(args)
     //    PersonDeduplicatorApp.main(args)
-//    FullMatcherApp.main(args)
+    FullMatcherApp.main(args)
     //    this.runDoi
-        this.test
+//        this.test
 
   }
 

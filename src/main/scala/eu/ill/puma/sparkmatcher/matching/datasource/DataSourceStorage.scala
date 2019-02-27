@@ -91,7 +91,26 @@ class DataSourceStorage(sparkSession: SparkSession, val prod: Boolean = ProgramC
 //  val trainingIdSql = s"(select distinct document_version1_id as training_id, document_type    from matching_static.match_candidate_validation, puma.document, puma.document_version    where document_version.document_id = document.id    and document_version1_id = document_version.id  and accepted = true) query"
 
 //  val trainingPairSql = s"(select proposal_id, publication_id from matching_static.test_match ) query"
-  val trainingPairSql = s"(select document_version1_id as proposal_id, document_version2_id as publication_id from matching_static.match_candidate_validation where accepted = true and document_version1_id < document_version2_id) query"
+//  val trainingPairSql = s"(select document_version1_id as proposal_id, document_version2_id as publication_id from matching_static.match_candidate_validation where accepted = true and document_version1_id < document_version2_id) query"
+
+  val trainingPairSql ="(" +
+    "SELECT DISTINCT CASE" +
+    "           WHEN document_type='PUBLICATION' THEN document_version1_id " +
+    "           ELSE document_version2_id " +
+    "       END AS publication_id, " +
+    "       CASE " +
+    "           WHEN document_type='PROPOSAL' THEN document_version1_id " +
+    "           ELSE document_version2_id " +
+    "       END AS proposal_id " +
+    "FROM matching_static.match_candidate_validation," +
+    "     puma.document_version, " +
+    "     puma.document " +
+    "WHERE puma.document_version.document_id = document.id " +
+    "  AND puma.document_version.document_id = document_version1_id " +
+    "  AND accepted = TRUE\n  AND document_version1_id < document_version2_id " +
+    "  AND document_type IN ('PUBLICATION', " +
+    "                        'PROPOSAL')" +
+    ") query"
 
   val typeSql = "(select document_version.id as document_version_id, document_type as document_type from document, document_version where document_version.document_id = document.id) type"
 
