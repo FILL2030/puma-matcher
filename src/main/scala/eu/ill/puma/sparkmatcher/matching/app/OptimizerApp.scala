@@ -23,8 +23,6 @@ import eu.ill.puma.sparkmatcher.utils.database.DbManager
 import eu.ill.puma.sparkmatcher.utils.logger.Logger
 import org.apache.log4j.Level
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.DoubleType
 
 object OptimizerApp {
 
@@ -51,8 +49,6 @@ object OptimizerApp {
       .config(ProgramConfig.defaultSparkConfig)
       .getOrCreate()
 
-    import sparkSession.implicits._
-
     //create data source storage
     val dataSourceStorage = new DataSourceStorage(sparkSession)
 
@@ -63,15 +59,10 @@ object OptimizerApp {
     val testConfig = new PipelineConfig("optimizer config")
     testConfig.dataSource = dataSourceStorage.matchCandidateDataSource
 
-    //define error column
-    //    val errorColumn = $"sum".cast(DoubleType)
-    val errorColumn = (lit(1.0) / ($"top5" + 1)).cast(DoubleType)
-
-
     pipeline.addConfig(testConfig)
 
     val initialisationStage = new InitialisationStage(Nil, "init_output")
-    val weightTrainerStage = new WeightTrainerStage("init_output" :: Nil, "weight", ProgramConfig.optimizerWindowsSize, ProgramConfig.optimizerAreaNumberToEvaluate, errorColumn, dataSourceStorage.trainingPairDataSource)
+    val weightTrainerStage = new WeightTrainerStage("init_output" :: Nil, "weight", ProgramConfig.optimizerWindowsSize, ProgramConfig.optimizerAreaNumberToEvaluate,  dataSourceStorage.trainingPairDataSource)
     val totalStage = new TotalStatisticStage("weight" :: Nil, "total", dataSourceStorage.matchCandidateDataSource, dataSourceStorage.typeDataSource)
 
     weightTrainerStage.addType(PersonType)
@@ -79,9 +70,9 @@ object OptimizerApp {
     weightTrainerStage.addType(CosineTitleType)
     weightTrainerStage.addType(TextType)
     weightTrainerStage.addType(InstrumentType)
-    weightTrainerStage.addType(MatcherNumberType)
+//    weightTrainerStage.addType(MatcherNumberType)
     weightTrainerStage.addType(PictureType)
-    weightTrainerStage.addType(AbstractType)
+//    weightTrainerStage.addType(AbstractType)
     //    weightTrainerStage.addType(TitleType)
 
     pipeline.addStage(initialisationStage)

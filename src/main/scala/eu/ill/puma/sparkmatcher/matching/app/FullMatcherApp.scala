@@ -30,7 +30,6 @@ import eu.ill.puma.sparkmatcher.utils.database.DbManager
 import eu.ill.puma.sparkmatcher.utils.logger.Logger
 import org.apache.log4j.Level
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.DoubleType
 import org.apache.spark.sql.{SaveMode, SparkSession}
 
 object FullMatcherApp {
@@ -113,7 +112,7 @@ object FullMatcherApp {
 
     val formulaMatchConfig = new PipelineConfig("formula config")
     formulaMatchConfig.dataSource = dataSourceStorage.fileDataSource
-    formulaMatchConfig.analyser = new FormulaAnalyser( dataSourceStorage.documentAddressDataSource)
+    formulaMatchConfig.analyser = new FormulaAnalyser(dataSourceStorage.documentAddressDataSource)
     formulaMatchConfig.matcher = new EntitiesMatcherV2
     formulaMatchConfig.scorer = new EntitiesScorer
     formulaMatchConfig.matchEntityType = FormulaType
@@ -223,7 +222,7 @@ object FullMatcherApp {
 
     val matchSaverPersisterStage = new MatchCandidatePersisterStage("filter_output" :: Nil, "", "match_candidate", dataSourceStorage.typeDataSource)
 
-    val matchSaverTrainingDataExtractionStage = new TrainingDataExtractionStage("filter_output" :: Nil, "", dataSourceStorage.trainingIdsDataSource)
+//    val matchSaverTrainingDataExtractionStage = new TrainingDataExtractionStage("filter_output" :: Nil, "", dataSourceStorage.trainingIdsDataSource)
 
     val matchSaverStatisticStage = new StatisticStage("filter_output" :: Nil, "", "match_candidate_stats", dataSourceStorage.typeDataSource)
 
@@ -231,7 +230,7 @@ object FullMatcherApp {
     matchSaverPipeline.addStage(matchSaverInitialisationStage)
     matchSaverPipeline.addStage(matchSaverFilterStage)
     matchSaverPipeline.addStage(matchSaverPersisterStage)
-    matchSaverPipeline.addStage(matchSaverTrainingDataExtractionStage)
+//    matchSaverPipeline.addStage(matchSaverTrainingDataExtractionStage)
     matchSaverPipeline.addStage(matchSaverStatisticStage)
 
     //add config
@@ -304,8 +303,6 @@ object FullMatcherApp {
       .config(ProgramConfig.defaultSparkConfig)
       .getOrCreate()
 
-    import sparkSession.implicits._
-
     //create data source storage
     val dataSourceStorage2 = new DataSourceStorage(sparkSession)
 
@@ -316,15 +313,10 @@ object FullMatcherApp {
     val optimizerConfig = new PipelineConfig("optimizer config")
     optimizerConfig.dataSource = dataSourceStorage2.matchCandidateDataSource
 
-    //define error column
-    //    val errorColumn = $"sum".cast(DoubleType)
-    val errorColumn = (lit(1.0) / ($"top5" + 1)).cast(DoubleType)
-
-
     optimizerPipeline.addConfig(optimizerConfig)
 
     val optInitialisationStage = new InitialisationStage(Nil, "init_output")
-    val optWeightTrainerStage = new WeightTrainerStage("init_output" :: Nil, "weight", ProgramConfig.optimizerWindowsSize, ProgramConfig.optimizerAreaNumberToEvaluate, errorColumn, dataSourceStorage2.trainingPairDataSource)
+    val optWeightTrainerStage = new WeightTrainerStage("init_output" :: Nil, "weight", ProgramConfig.optimizerWindowsSize, ProgramConfig.optimizerAreaNumberToEvaluate, dataSourceStorage2.trainingPairDataSource)
     val optTotalStage = new TotalStatisticStage("weight" :: Nil, "total", dataSourceStorage2.matchCandidateDataSource, dataSourceStorage2.typeDataSource)
 
     optWeightTrainerStage.addType(PersonType)

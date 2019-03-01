@@ -25,7 +25,7 @@ import eu.ill.puma.sparkmatcher.utils.logger.Logger
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{Column, DataFrame, Row, SaveMode, SparkSession}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -35,9 +35,11 @@ class WeightTrainerStage(override val input: List[String],
                          override val output: String,
                          val windowsSize: Int,
                          val areaNumberToEvaluate: Int,
-                         val errorColumn: Column,
                          val trainingMatchIds: DataSource,
                          val tableName: String = "score_weight",
+                         val positiveErrorValue: Double = 1,
+                         val negativeErrorValue: Double = 1,
+                         val thresholdValue: Int = 3,
                          val doiWeight: Double = ProgramConfig.optimizerDoiWeight,
                          val proposalCodeWeight: Double = ProgramConfig.optimizerProposalCodeWeight,
                          val matchingDatabaseUrl: String = ProgramConfig.matchingDatabaseUrl,
@@ -48,6 +50,10 @@ class WeightTrainerStage(override val input: List[String],
   private val publicationTrainingIds = trainingMatchIds.loadData._2.select("publication_id").distinct().collect().map(_.getLong(0))
   private val pairTrainingIds = trainingMatchIds.loadData._2.select("publication_id", "proposal_id").distinct().collect().map(x => x.getLong(0) * 1000000000L + x.getLong(1))
   private val acceptedPairTrainingIds = trainingMatchIds.loadData._2.filter(col("accepted") === true).select("publication_id", "proposal_id").distinct().collect().map(x => x.getLong(0) * 1000000000L + x.getLong(1))
+
+  println(pairTrainingIds.size)
+  println(acceptedPairTrainingIds.size)
+  println(pairTrainingIds.size - acceptedPairTrainingIds.size)
 
   /**
     * Run the stage
@@ -75,12 +81,12 @@ class WeightTrainerStage(override val input: List[String],
     /**
       * first iteration
       */
-    val bestAreaDF = Cartographer.optimize(matchCandidate, typeToOptimize.map(e => (e.stringValue, BigDecimal(0.0))).toList, initialStep, windowsSize, errorColumn)
-    val bestArea = bestAreaDF.take(areaNumberToEvaluate)
-    //
+    val bestAreaDF = Cartographer.optimize(matchCandidate, typeToOptimize.map(e => (e.stringValue, BigDecimal(0.0))).toList, initialStep, windowsSize).limit(areaNumberToEvaluate).cache
+    val bestArea = bestAreaDF.collect()
+
     //    show candidate
     Logger.info(this.name.stringValue, matchBuilder.name, s"First iteration complete, selected candidate :")
-    sparkSession.createDataFrame(util.Arrays.asList(bestArea: _*), bestAreaDF.schema).show(areaNumberToEvaluate)
+    bestAreaDF.show
 
     var paths = mutable.Map[String, Row]()
 
@@ -111,7 +117,7 @@ class WeightTrainerStage(override val input: List[String],
         step = step / BigDecimal(2)
 
         //launch optimisation
-        topResult = Walker.optimize(matchCandidate, previousIterationResult, step, 1, errorColumn).head
+        topResult = Walker.optimize(matchCandidate, previousIterationResult, step, 1).head
         iteration += 1
 
         //Save path
@@ -195,7 +201,7 @@ class WeightTrainerStage(override val input: List[String],
   }
 
   object Walker {
-    def optimize(matchCandidate: DataFrame, previousResult: List[(String, BigDecimal)], step: BigDecimal, windowsSize: Int, errorColumn: Column): DataFrame = {
+    def optimize(matchCandidate: DataFrame, previousResult: List[(String, BigDecimal)], step: BigDecimal, windowsSize: Int): DataFrame = {
       val sparkSession = matchCandidate.sparkSession
 
       import sparkSession.implicits._
@@ -209,6 +215,9 @@ class WeightTrainerStage(override val input: List[String],
       //compute rank
       val rankedMatchCandidate = this.computeRank(totalMatchCandidate)
 
+      //      sum(when($"rank" <= lit(10) and $"accepted" === true , 1).when($"rank" <= lit(10) and $"accepted" === false , -1).otherwise(0)) as "top10",
+
+
       //evaluator
       val bestWeight = rankedMatchCandidate
         .filter(($"publication_id" * 1000000000 + $"proposal_id").isin(pairTrainingIds: _*))
@@ -217,14 +226,19 @@ class WeightTrainerStage(override val input: List[String],
         .groupBy("weight_id")
         .agg(
           sum($"rank" - 1).cast(DoubleType) as "sum",
-          sum(when($"rank" <= lit(10) and $"accepted" === true , 1).when($"rank" <= lit(10) and $"accepted" === false , -1).otherwise(0)) as "top10",
-          sum(when($"rank" <= lit(5) and $"accepted" === true , 1).when($"rank" <= lit(5) and $"accepted" === false , -1).otherwise(0)) as "top5",
-          sum(when($"rank" <= lit(3) and $"accepted" === true , 1).when($"rank" <= lit(3) and $"accepted" === false , -1).otherwise(0)) as "top3",
-          sum(when($"rank" <= lit(1) and $"accepted" === true , 1).when($"rank" <= lit(1) and $"accepted" === false , -1).otherwise(0)) as "top1"
+          sum(when($"rank" <= lit(10) and $"accepted" === true, 1).otherwise(0)) as "top10",
+          sum(when($"rank" <= lit(thresholdValue) and $"accepted" === true, 1).otherwise(0)) as "top" + thresholdValue,
+          sum(when($"rank" <= lit(5) and $"accepted" === true, 1).otherwise(0)) as "top5",
+          sum(when($"rank" <= lit(3) and $"accepted" === true, 1).otherwise(0)) as "top3",
+          sum(when($"rank" <= lit(1) and $"accepted" === true, 1).otherwise(0)) as "top1",
+          sum(when($"rank" > lit(thresholdValue) and $"accepted" === true, positiveErrorValue)
+            .when($"rank" <= lit(thresholdValue) and $"accepted" === false, negativeErrorValue)
+            .otherwise(0).cast(DoubleType)) as "error",
+          sum(when($"rank" > lit(thresholdValue) and $"accepted" === true, 1).otherwise(0).cast(DoubleType)) as "positive_error_count",
+          sum(when($"rank" <= lit(thresholdValue) and $"accepted" === false, 1).otherwise(0).cast(DoubleType)) as "negative_error_count"
         )
         .join(weightDataFrame, $"weight_id" === $"id")
-        .withColumn("error", errorColumn)
-        .orderBy($"top5".desc, $"top3".desc, $"top1".desc)
+        .orderBy($"error".asc)
         .drop("id")
 
       bestWeight
@@ -342,7 +356,7 @@ class WeightTrainerStage(override val input: List[String],
 
   object Cartographer {
 
-    def optimize(matchCandidate: DataFrame, previousResult: List[(String, BigDecimal)], step: BigDecimal, windowsSize: Int, errorColumn: Column): DataFrame = {
+    def optimize(matchCandidate: DataFrame, previousResult: List[(String, BigDecimal)], step: BigDecimal, windowsSize: Int): DataFrame = {
 
       val sparkSession = matchCandidate.sparkSession
 
@@ -385,15 +399,20 @@ class WeightTrainerStage(override val input: List[String],
         .groupBy("weight_id")
         .agg(
           sum($"rank" - 1).cast(DoubleType) as "sum",
-          sum(when($"rank" <= lit(10) and $"accepted" === true , 1).when($"rank" <= lit(10) and $"accepted" === false , -1).otherwise(0)) as "top10",
-          sum(when($"rank" <= lit(5) and $"accepted" === true , 1).when($"rank" <= lit(5) and $"accepted" === false , -1).otherwise(0)) as "top5",
-          sum(when($"rank" <= lit(3) and $"accepted" === true , 1).when($"rank" <= lit(3) and $"accepted" === false , -1).otherwise(0)) as "top3",
-          sum(when($"rank" <= lit(1) and $"accepted" === true , 1).when($"rank" <= lit(1) and $"accepted" === false , -1).otherwise(0)) as "top1"
+          sum(when($"rank" <= lit(10) and $"accepted" === true, 1).otherwise(0)) as "top10",
+          sum(when($"rank" <= lit(thresholdValue) and $"accepted" === true, 1).otherwise(0)) as "top" + thresholdValue,
+          sum(when($"rank" <= lit(5) and $"accepted" === true, 1).otherwise(0)) as "top5",
+          sum(when($"rank" <= lit(3) and $"accepted" === true, 1).otherwise(0)) as "top3",
+          sum(when($"rank" <= lit(1) and $"accepted" === true, 1).otherwise(0)) as "top1",
+          sum(when($"rank" > lit(thresholdValue) and $"accepted" === true, positiveErrorValue)
+            .when($"rank" <= lit(thresholdValue) and $"accepted" === false, negativeErrorValue)
+            .otherwise(0).cast(DoubleType)) as "error",
+          sum(when($"rank" > lit(thresholdValue) and $"accepted" === true, 1).otherwise(0).cast(DoubleType)) as "positive_error_count",
+          sum(when($"rank" <= lit(thresholdValue) and $"accepted" === false, 1).otherwise(0).cast(DoubleType)) as "negative_error_count"
         )
 
       bestWeight = bestWeight.join(weight, Seq("weight_id"))
-        .withColumn("error", errorColumn)
-        .orderBy($"top5".desc, $"top3".desc, $"top1".desc)
+        .orderBy($"error".asc)
         .drop("id")
 
       //unpersist Weight
@@ -450,6 +469,8 @@ class WeightTrainerStage(override val input: List[String],
       weightDataFrame
     }
   }
+
+
 
 
   /**

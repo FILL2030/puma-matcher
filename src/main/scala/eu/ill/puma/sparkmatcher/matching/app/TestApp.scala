@@ -32,7 +32,8 @@ object TestApp {
     //    DocumentDeduplicatorApp.main(args)
     //    LaboratoryDeduplicatorApp.main(args)
     //    PersonDeduplicatorApp.main(args)
-    FullMatcherApp.main(args)
+//    FullMatcherApp.main(args)
+    OptimizerApp.main(args)
     //    this.runDoi
 //        this.test
 
@@ -287,6 +288,4 @@ object TestApp {
 
     //    sparkSession.sparkContext.textFile("hdfs://puma-spark-1:9000/user/hadoop/ngrams/*").toDF().show(20)
   }
-
-
 }
