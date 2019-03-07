@@ -15,7 +15,7 @@
  */
 package eu.ill.puma.sparkmatcher.matching.stage
 
-import eu.ill.puma.sparkmatcher.matching.pipepline.{DataFrameType, PipelineConfig, ViewStageName}
+import eu.ill.puma.sparkmatcher.matching.pipepline.{CountStageName, DataFrameType, PipelineConfig}
 import eu.ill.puma.sparkmatcher.utils.logger.Logger
 import org.apache.spark.sql.DataFrame
 
@@ -30,7 +30,7 @@ class CountStage(override val input: List[String], override val output: String) 
     None
   }
 
-  override def name = ViewStageName
+  override def name = CountStageName
 
   override def produceData(config: PipelineConfig): Boolean = false
 

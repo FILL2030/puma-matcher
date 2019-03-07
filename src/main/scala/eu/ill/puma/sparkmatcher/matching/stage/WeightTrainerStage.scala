@@ -51,10 +51,6 @@ class WeightTrainerStage(override val input: List[String],
   private val pairTrainingIds = trainingMatchIds.loadData._2.select("publication_id", "proposal_id").distinct().collect().map(x => x.getLong(0) * 1000000000L + x.getLong(1))
   private val acceptedPairTrainingIds = trainingMatchIds.loadData._2.filter(col("accepted") === true).select("publication_id", "proposal_id").distinct().collect().map(x => x.getLong(0) * 1000000000L + x.getLong(1))
 
-  println(pairTrainingIds.size)
-  println(acceptedPairTrainingIds.size)
-  println(pairTrainingIds.size - acceptedPairTrainingIds.size)
-
   /**
     * Run the stage
     *

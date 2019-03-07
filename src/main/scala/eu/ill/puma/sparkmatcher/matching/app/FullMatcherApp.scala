@@ -46,6 +46,9 @@ object FullMatcherApp {
     //run wordSpec
     this.runWordSpec
 
+    //score to list
+    this.scoreList
+
     //final db management
     DbManager.saveMatchInfo("end_date", LocalDateTime.now().toString)
 
@@ -261,7 +264,7 @@ object FullMatcherApp {
 
     val picturePipelinePersisterStage = new MatchCandidatePersisterStage("normalisation_output" :: Nil, "", "match_candidate", dataSourceStorage.typeDataSource)
 
-    val picturePipelineTrainingDataExtractionStage = new TrainingDataExtractionStage("normalisation_output" :: Nil, "", dataSourceStorage.trainingIdsDataSource)
+//    val picturePipelineTrainingDataExtractionStage = new TrainingDataExtractionStage("normalisation_output" :: Nil, "", dataSourceStorage.trainingIdsDataSource)
 
     val picturePipelineStatisticStage = new StatisticStage("normalisation_output" :: Nil, "", "match_candidate_stats", dataSourceStorage.typeDataSource)
 
@@ -281,7 +284,7 @@ object FullMatcherApp {
     picturePipeline.addStage(picturePipelineScoringStage)
     picturePipeline.addStage(picturePipelineNormalisationStage)
     picturePipeline.addStage(picturePipelinePersisterStage)
-    picturePipeline.addStage(picturePipelineTrainingDataExtractionStage)
+//    picturePipeline.addStage(picturePipelineTrainingDataExtractionStage)
     picturePipeline.addStage(picturePipelineStatisticStage)
 
     picturePipeline.addConfig(pictureMatchConfig)
@@ -372,6 +375,40 @@ object FullMatcherApp {
 
     //run
     wordSpecPipeline.run()
+  }
+
+  def scoreList = {
+    org.apache.log4j.Logger.getLogger("org").setLevel(Level.OFF)
+
+    //create spark session
+    val sparkSession = SparkSession
+      .builder()
+      .master("local[*]")
+      .appName("WordSpec")
+      .config(ProgramConfig.defaultSparkConfig)
+      .getOrCreate()
+
+    //create data source storage
+    val dataSourceStorage = new DataSourceStorage(sparkSession)
+
+    //create stage
+    val initialisationStage = new InitialisationStage(Nil, "init")
+    val scoreListStage = new ScoreListStage("init" :: Nil, "output", dataSourceStorage.trainingPairDataSource)
+
+    //create pipeline
+    val pipeline = new Pipeline("test_pipeline")
+    pipeline.addStage(initialisationStage)
+    pipeline.addStage(scoreListStage)
+
+    //configure pipeline
+    val testConfig = new PipelineConfig("test config")
+    testConfig.dataSource = dataSourceStorage.matchCandidateDataSource
+
+    //add config
+    pipeline.addConfig(testConfig)
+
+    //run
+    pipeline.run()
   }
 
 }

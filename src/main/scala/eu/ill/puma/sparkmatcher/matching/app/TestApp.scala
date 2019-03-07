@@ -29,14 +29,11 @@ import org.apache.spark.sql.SparkSession
 object TestApp {
   def main(args: Array[String]): Unit = {
 
-    //    DocumentDeduplicatorApp.main(args)
-    //    LaboratoryDeduplicatorApp.main(args)
-    //    PersonDeduplicatorApp.main(args)
-//    FullMatcherApp.main(args)
-    OptimizerApp.main(args)
+
     //    this.runDoi
 //        this.test
 
+    this.testScoreList
   }
 
 
@@ -287,5 +284,42 @@ object TestApp {
     Logger.info("App", "no config", "stop")
 
     //    sparkSession.sparkContext.textFile("hdfs://puma-spark-1:9000/user/hadoop/ngrams/*").toDF().show(20)
+  }
+
+  def testScoreList = {
+    org.apache.log4j.Logger.getLogger("org").setLevel(Level.OFF)
+
+
+    //create spark session
+    val sparkSession = SparkSession
+      .builder()
+      .master("local[*]")
+      .appName("WordSpec")
+      .config(ProgramConfig.defaultSparkConfig)
+      .getOrCreate()
+
+    //create data source storage
+    val dataSourceStorage = new DataSourceStorage(sparkSession)
+
+    //create stage
+    val initialisationStage = new InitialisationStage(Nil, "init")
+    val scoreListStage = new ScoreListStage("init" :: Nil, "output",  dataSourceStorage.trainingPairDataSource)
+
+    //create pipeline
+    val pipeline = new Pipeline("test_pipeline")
+    pipeline.addStage(initialisationStage)
+    pipeline.addStage(scoreListStage)
+
+    //configure pipeline
+    val testConfig = new PipelineConfig("test config")
+    testConfig.dataSource = dataSourceStorage.matchCandidateDataSource
+
+    //add config
+    pipeline.addConfig(testConfig)
+
+    //run
+    pipeline.run()
+
+
   }
 }
