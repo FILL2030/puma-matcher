@@ -109,6 +109,7 @@ class ScoreListStage(override val input: List[String],
       )
       .join(accepted_pair, Seq("document_version1_id", "document_version2_id"), "left")
       .na.fill(false, Seq("accepted"))
+      .na.fill(0)
 
     scoreList.write.mode(SaveMode.Overwrite).jdbc(matchingDatabaseUrl, tableName, dbProperties)
 
