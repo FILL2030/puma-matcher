@@ -46,6 +46,7 @@ case object TrainingStageName extends StageName("training stage")
 case object ViewStageName extends StageName("view stage")
 
 case object CountStageName extends StageName("count stage")
-case object ScoreListingStageName extends StageName("view stage")
+
+case object ScoreListingStageName extends StageName("score list stage")
 
 case object TotalScoreStageName extends StageName("total score stage")
