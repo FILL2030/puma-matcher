@@ -25,7 +25,7 @@
 
     <properties>
         <license-maven-plugin.version>3.0</license-maven-plugin.version>
-        <scala.version>2.11.8</scala.version>
+        <scala.version>2.13.3</scala.version>
         <spark.version>2.4.0</spark.version>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
