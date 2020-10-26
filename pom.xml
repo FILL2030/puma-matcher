@@ -31,7 +31,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <postgreSQl.version>42.1.4</postgreSQl.version>
         <scalatest.version>3.0.4</scalatest.version>
-        <junit.version>4.12</junit.version>
+        <junit.version>4.13.1</junit.version>
         <standfordNlp.version>3.6.0</standfordNlp.version>
         <scala-async.version>0.9.7</scala-async.version>
         <spark-core-Nlp.version>0.3.1-s_2.11</spark-core-Nlp.version>
