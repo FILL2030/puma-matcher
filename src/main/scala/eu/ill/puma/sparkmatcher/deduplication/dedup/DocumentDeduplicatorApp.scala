@@ -45,6 +45,7 @@ object DocumentDeduplicatorApp {
 				  |  and dv2.document_id = d2.id
 				  |  and s1.importer_short_name = ?
 				  |  and s2.importer_short_name != ?
+				  |  and (select count(f.id) from file f where f.document_version_id = dv1.id and f.document_type = 'EXTRACTED_FULL_TEXT') > 0
 				  |union
 				  |select dv1.id as wos_dv_id, dv2.id as other_dv_id, s2.importer_short_name as other_importer, d1.id as wos_document_id, d2.id as other_document_id, lower(dv1.doi) as wos_doi, lower(dv2.doi) as other_doi, dv1.title as wos_title, dv2.title as other_title, dv1.obsolete as wos_dv_obsolete, dv2.obsolete as other_dv_obsolete
 				  |  from document_version dv1, document_version dv2, document_version_source s1, document_version_source s2, document d1, document d2
@@ -57,6 +58,7 @@ object DocumentDeduplicatorApp {
 				  |  and dv2.document_id = d2.id
 				  |  and s1.importer_short_name = ?
 				  |  and s2.importer_short_name = ?
+				  |  and (select count(f.id) from file f where f.document_version_id = dv1.id and f.document_type = 'EXTRACTED_FULL_TEXT') > 0
 				  |)
 				""".stripMargin
 
