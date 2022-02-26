@@ -32,7 +32,7 @@
         <postgreSQl.version>42.1.4</postgreSQl.version>
         <scalatest.version>3.0.4</scalatest.version>
         <junit.version>4.12</junit.version>
-        <standfordNlp.version>3.6.0</standfordNlp.version>
+        <standfordNlp.version>4.4.0</standfordNlp.version>
         <scala-async.version>0.9.7</scala-async.version>
         <spark-core-Nlp.version>0.3.1-s_2.11</spark-core-Nlp.version>
         <protobuf.version>2.6.1</protobuf.version>
