@@ -29,7 +29,7 @@
         <spark.version>2.4.0</spark.version>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <postgreSQl.version>42.1.4</postgreSQl.version>
+        <postgreSQl.version>42.4.1</postgreSQl.version>
         <scalatest.version>3.0.4</scalatest.version>
         <junit.version>4.12</junit.version>
         <standfordNlp.version>3.6.0</standfordNlp.version>
